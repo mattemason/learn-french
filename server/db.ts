@@ -43,6 +43,15 @@ export async function migrate() {
       client_updated_at bigint NOT NULL,
       saved_at timestamptz NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS email_codes (
+      email text NOT NULL,
+      purpose text NOT NULL,
+      code_hash text NOT NULL,
+      expires_at timestamptz NOT NULL,
+      attempts integer NOT NULL DEFAULT 0,
+      last_sent_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, purpose)
+    );
     CREATE TABLE IF NOT EXISTS ai_usage (
       user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       day date NOT NULL,
@@ -51,4 +60,5 @@ export async function migrate() {
     );
   `);
   await query(`DELETE FROM sessions WHERE expires_at < now()`);
+  await query(`DELETE FROM email_codes WHERE expires_at < now() - interval '1 day'`);
 }

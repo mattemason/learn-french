@@ -33,9 +33,8 @@ npm start              # production server: app + API on $PORT
 | School mode: QCE French 2025 syllabus, Units 1–4, 11 topics, exam-style tasks, IA1/IA2/IA3/EA guide | ✅ |
 | Audio: free on-device text-to-speech (Web Speech API); speech recognition where the browser supports it | ✅ |
 | Data export/import (JSON backup) | ✅ |
-| Accounts (email + password) and cross-device progress sync in Postgres | ✅ |
+| Accounts (email + password, verified with an emailed 6-digit code), forgot-password reset, cross-device progress sync in Postgres | ✅ |
 | AI tutor: explain, hint, correct my writing, free conversation. Signed-in learners only, with a daily cap per learner | ⚙️ set `ANTHROPIC_API_KEY` |
-| Password reset / magic-link email | 🔜 needs an email provider (e.g. Postmark) |
 | Background push notifications when the app is closed | 🔜 future (needs a push server) |
 | A2–C2 lesson content | 🔜 add unit files |
 
@@ -66,7 +65,9 @@ src/
 server/             ← Express server for Railway
   index.ts            static app, auth, /api/state, /api/tutor
   db.ts               Postgres pool + idempotent migrations (run on boot)
-  auth.ts             scrypt password hashing, httpOnly session cookies
+  auth.ts             scrypt password hashing, httpOnly session cookies, rate limits
+  codes.ts            6-digit email codes (hashed, 10-min expiry, 5 attempts)
+  email.ts            Postmark / Resend sender (falls back to logging)
   tutor.ts            optional Claude proxy with a per-learner daily cap
 ```
 
@@ -89,6 +90,7 @@ No UI changes are needed.
    - Optional: `ANTHROPIC_API_KEY` to switch on the AI tutor
    - Optional: `AI_MODEL` — the default is `claude-opus-5-5`; `claude-haiku-5-5` is far cheaper
    - Optional: `AI_DAILY_LIMIT` — requests per learner per day, default 40
+   - `POSTMARK_SERVER_TOKEN` (or `RESEND_API_KEY`) and `EMAIL_FROM`, e.g. `Allez ! <learn@emason.com.au>` — sends the 6-digit verification and password-reset codes. The sender domain must be verified with the provider. Without one, codes are printed to the Railway deploy logs.
    - Optional: `ALLOWED_EMAIL_DOMAINS` (or `ALLOWED_DOMAINS`), e.g. `emason.com.au` — only these email domains can create accounts or log in (comma-separate several)
 4. **Generate a domain** under the service's Settings → Networking.
 

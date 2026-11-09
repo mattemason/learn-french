@@ -1,54 +1,128 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, LogOut, Trash2 } from 'lucide-react';
-import { useCloud, logIn, signUp, logOut, deleteAccount, resolveConflict } from '@/sync/cloud';
+import { useCloud, logIn, signUp, startSignup, startReset, resetPassword, logOut, deleteAccount, resolveConflict } from '@/sync/cloud';
 import { useStore } from '@/state/store';
 import { Portal } from './ui';
 
-export function AccountForm({ initialMode = 'signup', onDone }: { initialMode?: 'signup' | 'login'; onDone?: () => void }) {
-  const [mode, setMode] = useState<'signup' | 'login'>(initialMode);
+type Mode = 'signup' | 'login' | 'reset';
+
+export function AccountForm({ initialMode = 'signup', onDone, defaultName }: { initialMode?: 'signup' | 'login'; onDone?: () => void; defaultName?: string }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [step, setStep] = useState<'details' | 'code'>('details');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const name = useStore((s) => s.profile.name);
-  const domains = useCloud((s) => s.config.allowedDomains ?? []);
-  const domainHint = domains.length ? domains.map((d) => '@' + d).join(' or ') : null;
+  const [code, setCode] = useState('');
+  const profileName = useStore((s) => s.profile.name);
+  const [name, setName] = useState(defaultName ?? profileName);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const domains = useCloud((s) => s.config.allowedDomains ?? []);
+  const domainHint = domains.length ? domains.map((d) => '@' + d).join(' or ') : null;
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const switchMode = (m: Mode) => { setMode(m); setStep('details'); setErr(null); setCode(''); };
+
+  const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setErr(null);
-    try {
-      if (mode === 'signup') await signUp(email, password, name);
-      else await logIn(email, password);
-      onDone?.();
-    } catch (ex) {
-      setErr((ex as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    try { await fn(); } catch (ex) { setErr((ex as Error).message); } finally { setBusy(false); }
   };
+
+  const sendCode = () => run(async () => {
+    if (mode === 'signup') await startSignup(email);
+    else await startReset(email);
+    setStep('code');
+    setCode('');
+    setCooldown(60);
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === 'login') return run(async () => { await logIn(email, password); onDone?.(); });
+    if (step === 'details') return sendCode();
+    return run(async () => {
+      if (mode === 'signup') await signUp(email, password, name, code);
+      else await resetPassword(email, code, password);
+      if (name.trim() && !useStore.getState().profile.name) useStore.getState().updateProfile({ name: name.trim() });
+      onDone?.();
+    });
+  };
+
+  const emailField = (
+    <label><span className="label">Email</span>
+      <input className="input mt-1" type="email" autoComplete="email" required value={email} disabled={step === 'code'}
+        onChange={(e) => setEmail(e.target.value)} placeholder={domainHint ? `you${domainHint.split(' or ')[0]}` : 'you@example.com'} />
+      {domainHint && mode !== 'login' && step === 'details' && <span className="text-xs text-ink-soft">Accounts are limited to {domainHint} addresses.</span>}
+    </label>
+  );
+  const passwordField = (label: string) => (
+    <label><span className="label">{label}</span>
+      <input className="input mt-1" type="password" required minLength={mode === 'login' ? 1 : 8}
+        autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+      {mode !== 'login' && <span className="text-xs text-ink-soft">At least 8 characters.</span>}
+    </label>
+  );
 
   return (
     <form onSubmit={submit} className="grid gap-3">
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-surface-2">
-        {(['signup', 'login'] as const).map((m) => (
-          <button key={m} type="button" onClick={() => { setMode(m); setErr(null); }} className={`rounded-xl py-2 text-sm font-extrabold ${mode === m ? 'bg-surface shadow text-ink' : 'text-ink-soft'}`}>
-            {m === 'signup' ? 'Create account' : 'Log in'}
-          </button>
-        ))}
-      </div>
-      <label><span className="label">Email</span>
-        <input className="input mt-1" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={domainHint ? `you${domainHint.split(' or ')[0]}` : undefined} />
-        {domainHint && <span className="text-xs text-ink-soft">Accounts are limited to {domainHint} addresses.</span>}
-      </label>
-      <label><span className="label">Password</span>
-        <input className="input mt-1" type="password" required minLength={mode === 'signup' ? 8 : 1} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
-        {mode === 'signup' && <span className="text-xs text-ink-soft">At least 8 characters.</span>}
-      </label>
+      {mode !== 'reset' && (
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-surface-2">
+          {(['signup', 'login'] as const).map((m) => (
+            <button key={m} type="button" onClick={() => switchMode(m)} className={`rounded-xl py-2 text-sm font-extrabold ${mode === m ? 'bg-surface shadow text-ink' : 'text-ink-soft'}`}>
+              {m === 'signup' ? 'Create account' : 'Log in'}
+            </button>
+          ))}
+        </div>
+      )}
+      {mode === 'reset' && <div className="font-display text-xl font-bold">Reset your password</div>}
+
+      {step === 'details' && (
+        <>
+          {mode === 'signup' && (
+            <label><span className="label">Your name</span>
+              <input className="input mt-1" autoComplete="given-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
+            </label>
+          )}
+          {emailField}
+          {mode === 'signup' && passwordField('Choose a password')}
+          {mode === 'login' && passwordField('Password')}
+        </>
+      )}
+
+      {step === 'code' && (
+        <>
+          <div className="rounded-2xl bg-accent/10 p-3 text-sm">
+            We've emailed a 6-digit code to <b>{email}</b>. It expires in 10 minutes.
+            <button type="button" className="block mt-1 font-bold underline" onClick={() => { setStep('details'); setErr(null); }}>Use a different email</button>
+          </div>
+          <label><span className="label">Verification code</span>
+            <input className="input mt-1 text-center text-2xl font-black tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code"
+              pattern="[0-9]{6}" maxLength={6} required autoFocus value={code} onChange={(e) => setCode(e.target.value.replace(/D/g, '').slice(0, 6))} />
+          </label>
+          {mode === 'reset' && passwordField('New password')}
+        </>
+      )}
+
       {err && <p className="text-danger text-sm font-semibold">{err}</p>}
-      <button className="btn-primary" disabled={busy}>{busy && <Loader2 size={16} className="animate-spin" />}{mode === 'signup' ? 'Create account' : 'Log in'}</button>
-      <p className="text-xs text-ink-soft">{mode === 'signup' ? 'Your current progress on this device is saved to your new account.' : 'We\'ll bring your saved progress to this device.'}</p>
+      <button className="btn-primary" disabled={busy || (step === 'code' && code.length !== 6)}>
+        {busy && <Loader2 size={16} className="animate-spin" />}
+        {mode === 'login' ? 'Log in' : step === 'details' ? 'Email me a code' : mode === 'signup' ? 'Verify & create account' : 'Set new password'}
+      </button>
+
+      {step === 'code' && (
+        <button type="button" className="text-sm font-bold text-ink-soft disabled:opacity-50" disabled={busy || cooldown > 0} onClick={sendCode}>
+          {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+        </button>
+      )}
+      {mode === 'login' && <button type="button" className="text-sm font-bold text-ink-soft" onClick={() => switchMode('reset')}>Forgot password?</button>}
+      {mode === 'reset' && <button type="button" className="text-sm font-bold text-ink-soft" onClick={() => switchMode('login')}>Back to log in</button>}
+      {mode === 'signup' && step === 'details' && <p className="text-xs text-ink-soft">Your current progress on this device is saved to your new account.</p>}
     </form>
   );
 }

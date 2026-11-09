@@ -111,8 +111,25 @@ export async function resolveConflict(keep: 'server' | 'local') {
   else await push(true);
 }
 
-export async function signUp(email: string, password: string, name: string) {
-  const { user } = await api<{ user: Account }>('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, name }) });
+/** Registration step 1: emails a 6-digit code. */
+export async function startSignup(email: string) {
+  await api('/auth/signup/start', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+/** Registration step 2: verify the code and create the account. */
+export async function signUp(email: string, password: string, name: string, code: string) {
+  const { user } = await api<{ user: Account }>('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, name, code }) });
+  useCloud.setState({ account: user });
+  await pull('login');
+  return user;
+}
+
+export async function startReset(email: string) {
+  await api('/auth/reset/start', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export async function resetPassword(email: string, code: string, password: string) {
+  const { user } = await api<{ user: Account }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, password }) });
   useCloud.setState({ account: user });
   await pull('login');
   return user;

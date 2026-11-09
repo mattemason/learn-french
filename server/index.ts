@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 import { dbConfigured, migrate, query } from './db.js';
 import { allowedDomains, createSession, destroySession, domainError, emailAllowed, hashPassword, limitAttempts, loadUser, requireUser, verifyPassword, type AuthedRequest } from './auth.js';
 import { aiConfigured, tutorHandler } from './tutor.js';
+import { CodeError, consumeCode, issueCode } from './codes.js';
+import { emailProvider } from './email.js';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -32,8 +34,30 @@ if (dbConfigured) {
 
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  api.post('/auth/signup', limitAttempts(), wrap(async (req, res) => {
-    const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const emailOf = (req: Request) => String(req.body?.email ?? '').trim().toLowerCase();
+  const codeFail = (res: Response, e: unknown) => {
+    if (e instanceof CodeError) return res.status(e.status).json({ error: e.message });
+    throw e;
+  };
+
+  /** Step 1 of registration: email a 6-digit code. */
+  api.post('/auth/signup/start', limitAttempts('signup-start', 10), wrap(async (req, res) => {
+    const email = emailOf(req);
+    if (!EMAIL.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
+    if (!emailAllowed(email)) return res.status(403).json({ error: domainError() });
+    const exists = await query('SELECT 1 FROM users WHERE email = $1', [email]);
+    if (exists.rowCount) return res.status(409).json({ error: 'An account with this email already exists — try logging in.' });
+    try {
+      await issueCode(email, 'signup');
+    } catch (e) {
+      return codeFail(res, e);
+    }
+    res.json({ ok: true });
+  }));
+
+  /** Step 2 of registration: verify the code and create the account. */
+  api.post('/auth/signup', limitAttempts('signup', 15), wrap(async (req, res) => {
+    const email = emailOf(req);
     const password = String(req.body?.password ?? '');
     const name = String(req.body?.name ?? '').trim().slice(0, 40);
     if (!EMAIL.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
@@ -41,12 +65,50 @@ if (dbConfigured) {
     if (password.length < 8) return res.status(400).json({ error: 'Use at least 8 characters for your password.' });
     const exists = await query('SELECT 1 FROM users WHERE email = $1', [email]);
     if (exists.rowCount) return res.status(409).json({ error: 'An account with this email already exists — try logging in.' });
+    try {
+      await consumeCode(email, 'signup', req.body?.code);
+    } catch (e) {
+      return codeFail(res, e);
+    }
     const { rows } = await query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name', [email, await hashPassword(password), name]);
     await createSession(res, rows[0].id);
     res.json({ user: rows[0] });
   }));
 
-  api.post('/auth/login', limitAttempts(), wrap(async (req, res) => {
+  /** Forgot password, step 1. Always answers ok so it doesn't reveal which emails have accounts. */
+  api.post('/auth/reset/start', limitAttempts('reset-start', 10), wrap(async (req, res) => {
+    const email = emailOf(req);
+    if (!EMAIL.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
+    if (!emailAllowed(email)) return res.status(403).json({ error: domainError() });
+    const exists = await query('SELECT 1 FROM users WHERE email = $1', [email]);
+    if (exists.rowCount) {
+      try {
+        await issueCode(email, 'reset');
+      } catch (e) {
+        return codeFail(res, e);
+      }
+    }
+    res.json({ ok: true });
+  }));
+
+  /** Forgot password, step 2: verify code, set new password, sign out other devices. */
+  api.post('/auth/reset', limitAttempts('reset', 15), wrap(async (req, res) => {
+    const email = emailOf(req);
+    const password = String(req.body?.password ?? '');
+    if (password.length < 8) return res.status(400).json({ error: 'Use at least 8 characters for your password.' });
+    try {
+      await consumeCode(email, 'reset', req.body?.code);
+    } catch (e) {
+      return codeFail(res, e);
+    }
+    const { rows } = await query('UPDATE users SET password_hash = $2 WHERE email = $1 RETURNING id, email, name', [email, await hashPassword(password)]);
+    if (!rows[0]) return res.status(400).json({ error: 'Please request a code first.' });
+    await query('DELETE FROM sessions WHERE user_id = $1', [rows[0].id]);
+    await createSession(res, rows[0].id);
+    res.json({ user: rows[0] });
+  }));
+
+  api.post('/auth/login', limitAttempts('login', 10), wrap(async (req, res) => {
     const email = String(req.body?.email ?? '').trim().toLowerCase();
     const password = String(req.body?.password ?? '');
     if (!emailAllowed(email)) return res.status(403).json({ error: domainError() });
@@ -114,7 +176,10 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 migrate()
   .then(() => {
-    app.listen(PORT, () => console.log(`Allez ! listening on :${PORT} · db=${dbConfigured} · ai=${aiConfigured}`));
+    app.listen(PORT, () =>
+      console.log(`Allez ! listening on :${PORT} · db=${dbConfigured} · ai=${aiConfigured} · email=${emailProvider} · domains=${allowedDomains.join(',') || 'any'}`),
+    );
+    if (emailProvider === 'log') console.warn('No email provider set (POSTMARK_SERVER_TOKEN or RESEND_API_KEY) — verification codes will be printed to this log.');
   })
   .catch((e) => {
     console.error('Database migration failed', e);

@@ -29,7 +29,7 @@ export function OnboardingPage() {
   return (
     <div className="min-h-dvh bg-bg pattern-dots safe-top">
       <div className="mx-auto max-w-md px-5 py-10 min-h-dvh flex flex-col">
-        <ProgressBar value={(step + 1) / 5} className="mb-8" color="bg-primary" />
+        <ProgressBar value={(step + 1) / 6} className="mb-8" color="bg-primary" />
         <div className="flex-1 animate-rise" key={step}>
           {step === 0 && (
             <div className="text-center pt-6">
@@ -85,6 +85,16 @@ export function OnboardingPage() {
           )}
           {step === 4 && (
             <div>
+              <h2 className="font-display text-3xl font-bold">Create your account</h2>
+              <p className="text-ink-soft mt-1">Keep your progress safe and continue on any device. We'll email you a 6-digit code to confirm your address.</p>
+              <div className="mt-6">
+                <AccountForm defaultName={name} onDone={() => { if (useStore.getState().profile.onboarded) nav('/', { replace: true }); else setStep(5); }} />
+              </div>
+              <button className="mt-6 w-full text-sm font-bold text-ink-soft underline underline-offset-4" onClick={() => setStep(5)}>Skip for now — keep progress on this device only</button>
+            </div>
+          )}
+          {step === 5 && (
+            <div>
               <h2 className="font-display text-3xl font-bold">How much French do you know?</h2>
               <div className="grid gap-3 mt-6">
                 <button onClick={() => finish(false)} className="tile p-5">
@@ -99,7 +109,7 @@ export function OnboardingPage() {
         </div>
         {step < 4 && (
           <div className="grid gap-2 mt-8">
-            <button className="btn-primary" onClick={() => setStep(step + 1)}>{step === 0 ? 'Commencer' : 'Continue'} <ArrowRight size={18} /></button>
+            <button className="btn-primary" onClick={() => setStep(step === 3 && !accounts ? 5 : step + 1)}>{step === 0 ? 'Commencer' : 'Continue'} <ArrowRight size={18} /></button>
             {step > 0 && <button className="btn-ghost" onClick={() => setStep(step - 1)}>Back</button>}
           </div>
         )}

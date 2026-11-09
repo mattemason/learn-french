@@ -100,11 +100,16 @@ export function requireUser(req: AuthedRequest, res: Response, next: NextFunctio
   next();
 }
 
-/** Tiny in-memory limiter for login/signup attempts (per IP). */
+/**
+ * Tiny in-memory limiter, keyed per route + IP + email address — so people
+ * sharing one office IP don't lock each other out, and sign-up traffic never
+ * eats into the login allowance.
+ */
 const attempts = new Map<string, { n: number; reset: number }>();
-export function limitAttempts(max = 10, windowMs = 15 * 60_000) {
+export function limitAttempts(route: string, max = 10, windowMs = 15 * 60_000) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const key = req.ip ?? 'unknown';
+    const email = String(req.body?.email ?? '').trim().toLowerCase();
+    const key = `${route}:${req.ip ?? 'unknown'}:${email}`;
     const now = Date.now();
     const a = attempts.get(key);
     if (!a || a.reset < now) attempts.set(key, { n: 1, reset: now + windowMs });
