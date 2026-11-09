@@ -9,7 +9,7 @@
 import { create } from 'zustand';
 import { useStore, type LearnerState } from '@/state/store';
 
-export interface ServerConfig { accounts: boolean; ai: boolean }
+export interface ServerConfig { accounts: boolean; ai: boolean; allowedDomains?: string[] }
 export interface Account { id: string; email: string; name: string }
 export type SyncStatus = 'checking' | 'unavailable' | 'signed-out' | 'syncing' | 'synced' | 'offline' | 'error';
 

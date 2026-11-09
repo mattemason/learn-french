@@ -22,7 +22,25 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
+/**
+ * Optional allow-list of email domains, e.g. ALLOWED_DOMAINS="emason.com.au"
+ * (ALLOWED_EMAIL_DOMAINS also accepted). Comma-separated; empty means anyone can register.
+ */
+export const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS || process.env.ALLOWED_DOMAINS || '')
+  .split(',')
+  .map((d) => d.trim().toLowerCase().replace(/^@/, ''))
+  .filter(Boolean);
+
+export function emailAllowed(email: string): boolean {
+  if (!allowedDomains.length) return true;
+  const domain = email.toLowerCase().split('@')[1] ?? '';
+  return allowedDomains.includes(domain);
+}
+
+export const domainError = () =>
+  `Accounts are limited to ${allowedDomains.map((d) => '@' + d).join(' or ')} email addresses.`;
+
+const sha256 =(s: string) => createHash('sha256').update(s).digest('hex');
 
 export async function createSession(res: Response, userId: string) {
   const token = randomBytes(32).toString('base64url');
@@ -68,7 +86,8 @@ export async function loadUser(req: AuthedRequest, _res: Response, next: NextFun
          WHERE s.token_hash = $1 AND s.expires_at > now()`,
         [sha256(token)],
       );
-      if (rows[0]) req.user = rows[0];
+      // Sessions for addresses outside the allow-list stop working if the list changes.
+      if (rows[0] && emailAllowed(rows[0].email)) req.user = rows[0];
     }
     next();
   } catch (e) {

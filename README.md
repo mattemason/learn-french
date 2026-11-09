@@ -89,6 +89,7 @@ No UI changes are needed.
    - Optional: `ANTHROPIC_API_KEY` to switch on the AI tutor
    - Optional: `AI_MODEL` — the default is `claude-opus-5-5`; `claude-haiku-5-5` is far cheaper
    - Optional: `AI_DAILY_LIMIT` — requests per learner per day, default 40
+   - Optional: `ALLOWED_EMAIL_DOMAINS` (or `ALLOWED_DOMAINS`), e.g. `emason.com.au` — only these email domains can create accounts or log in (comma-separate several)
 4. **Generate a domain** under the service's Settings → Networking.
 
 Tables are created automatically on first boot. Railway supplies `PORT` itself. Don't set `NODE_ENV=production` as a build-time variable, because the build needs the dev dependencies (TypeScript, Vite).

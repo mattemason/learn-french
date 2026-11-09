@@ -9,7 +9,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dbConfigured, migrate, query } from './db.js';
-import { createSession, destroySession, hashPassword, limitAttempts, loadUser, requireUser, verifyPassword, type AuthedRequest } from './auth.js';
+import { allowedDomains, createSession, destroySession, domainError, emailAllowed, hashPassword, limitAttempts, loadUser, requireUser, verifyPassword, type AuthedRequest } from './auth.js';
 import { aiConfigured, tutorHandler } from './tutor.js';
 
 const app = express();
@@ -25,7 +25,7 @@ const api = express.Router();
 const wrap = (fn: (req: AuthedRequest, res: Response) => Promise<unknown>) => (req: Request, res: Response, next: NextFunction) => fn(req, res).catch(next);
 
 api.get('/health', (_req, res) => res.json({ ok: true }));
-api.get('/config', (_req, res) => res.json({ accounts: dbConfigured, ai: aiConfigured && dbConfigured }));
+api.get('/config', (_req, res) => res.json({ accounts: dbConfigured, ai: aiConfigured && dbConfigured, allowedDomains }));
 
 if (dbConfigured) {
   api.use(loadUser);
@@ -37,6 +37,7 @@ if (dbConfigured) {
     const password = String(req.body?.password ?? '');
     const name = String(req.body?.name ?? '').trim().slice(0, 40);
     if (!EMAIL.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
+    if (!emailAllowed(email)) return res.status(403).json({ error: domainError() });
     if (password.length < 8) return res.status(400).json({ error: 'Use at least 8 characters for your password.' });
     const exists = await query('SELECT 1 FROM users WHERE email = $1', [email]);
     if (exists.rowCount) return res.status(409).json({ error: 'An account with this email already exists — try logging in.' });
@@ -48,6 +49,7 @@ if (dbConfigured) {
   api.post('/auth/login', limitAttempts(), wrap(async (req, res) => {
     const email = String(req.body?.email ?? '').trim().toLowerCase();
     const password = String(req.body?.password ?? '');
+    if (!emailAllowed(email)) return res.status(403).json({ error: domainError() });
     const { rows } = await query('SELECT id, email, name, password_hash FROM users WHERE email = $1', [email]);
     const user = rows[0];
     if (!user || !(await verifyPassword(password, user.password_hash))) return res.status(401).json({ error: 'Email or password is incorrect.' });

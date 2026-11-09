@@ -9,6 +9,8 @@ export function AccountForm({ initialMode = 'signup', onDone }: { initialMode?: 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const name = useStore((s) => s.profile.name);
+  const domains = useCloud((s) => s.config.allowedDomains ?? []);
+  const domainHint = domains.length ? domains.map((d) => '@' + d).join(' or ') : null;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -36,7 +38,10 @@ export function AccountForm({ initialMode = 'signup', onDone }: { initialMode?: 
           </button>
         ))}
       </div>
-      <label><span className="label">Email</span><input className="input mt-1" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+      <label><span className="label">Email</span>
+        <input className="input mt-1" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={domainHint ? `you${domainHint.split(' or ')[0]}` : undefined} />
+        {domainHint && <span className="text-xs text-ink-soft">Accounts are limited to {domainHint} addresses.</span>}
+      </label>
       <label><span className="label">Password</span>
         <input className="input mt-1" type="password" required minLength={mode === 'signup' ? 8 : 1} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
         {mode === 'signup' && <span className="text-xs text-ink-soft">At least 8 characters.</span>}
