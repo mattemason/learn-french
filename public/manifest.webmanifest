@@ -1,0 +1,9 @@
+{
+  "name": "Allez ! — Learn French",
+  "short_name": "Allez",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff7fa",
+  "theme_color": "#ec4878",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

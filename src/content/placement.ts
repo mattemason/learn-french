@@ -1,0 +1,240 @@
+import type { PlacementQuestion } from './types';
+
+/**
+ * Placement test: 24 multiple-choice questions, 6 per level (A1–B2),
+ * mixing vocabulary, grammar, reading and listening (audio read by TTS).
+ */
+export const placementQuestions: PlacementQuestion[] = [
+  /* ---------- A1 ---------- */
+  {
+    id: 'p-a1-1',
+    level: 'A1',
+    skill: 'vocabulary',
+    prompt: 'How do you say "Thank you" in French?',
+    options: ['Bonjour', 'Merci', 'Pardon', 'Salut'],
+    answer: 1,
+  },
+  {
+    id: 'p-a1-2',
+    level: 'A1',
+    skill: 'grammar',
+    prompt: 'Nous ___ étudiants.',
+    options: ['sommes', 'êtes', 'sont', 'suis'],
+    answer: 0,
+  },
+  {
+    id: 'p-a1-3',
+    level: 'A1',
+    skill: 'grammar',
+    prompt: 'Elle ___ seize ans.',
+    options: ['est', 'a', 'as', 'fait'],
+    answer: 1,
+  },
+  {
+    id: 'p-a1-4',
+    level: 'A1',
+    skill: 'reading',
+    prompt: '« Je m\'appelle Lucas. J\'habite à Lyon avec ma mère et ma sœur. » Who does Lucas live with?',
+    options: ['His father and his sister', 'His mother and his brother', 'His grandparents', 'His mother and his sister'],
+    answer: 3,
+  },
+  {
+    id: 'p-a1-5',
+    level: 'A1',
+    skill: 'listening',
+    prompt: 'Listen. What time is it?',
+    audio: 'Il est huit heures et demie.',
+    options: ['8:15', '8:30', '2:30', '9:30'],
+    answer: 1,
+  },
+  {
+    id: 'p-a1-6',
+    level: 'A1',
+    skill: 'grammar',
+    prompt: '___ maison de mes grands-parents est très grande.',
+    options: ['Le', 'Les', 'La', "L'"],
+    answer: 2,
+  },
+
+  /* ---------- A2 ---------- */
+  {
+    id: 'p-a2-1',
+    level: 'A2',
+    skill: 'grammar',
+    prompt: 'Hier soir, nous ___ au cinéma.',
+    options: ['sommes allés', 'avons allé', 'allons', 'allez'],
+    answer: 0,
+  },
+  {
+    id: 'p-a2-2',
+    level: 'A2',
+    skill: 'grammar',
+    prompt: 'Le matin, je ___ à sept heures.',
+    options: ['lève', 'me lève', 'se lève', 'suis levé'],
+    answer: 1,
+  },
+  {
+    id: 'p-a2-3',
+    level: 'A2',
+    skill: 'grammar',
+    prompt: 'Paris est ___ grand que Lyon.',
+    options: ['très', 'le plus', 'plus', 'meilleur'],
+    answer: 2,
+  },
+  {
+    id: 'p-a2-4',
+    level: 'A2',
+    skill: 'reading',
+    prompt:
+      '« Samedi dernier, Inès a pris le train pour Marseille. Elle a visité le Vieux-Port et elle a mangé une bouillabaisse. » What did Inès do?',
+    options: [
+      'She drove to Marseille last Saturday',
+      'She is going to visit Marseille next Saturday',
+      'She cooked a fish soup at home',
+      'She took the train to Marseille and ate a local dish',
+    ],
+    answer: 3,
+  },
+  {
+    id: 'p-a2-5',
+    level: 'A2',
+    skill: 'listening',
+    prompt: "Listen. Why can't she come tonight?",
+    audio: 'Désolée, je ne peux pas venir ce soir. Je dois garder mon petit frère, parce que mes parents sont au restaurant.',
+    options: [
+      "She's ill",
+      'She has to look after her little brother',
+      "She's going to a restaurant with her parents",
+      'She has too much homework',
+    ],
+    answer: 1,
+  },
+  {
+    id: 'p-a2-6',
+    level: 'A2',
+    skill: 'vocabulary',
+    prompt: "Je ne vais pas à l'école aujourd'hui : j'ai mal ___ tête.",
+    options: ['au', 'de la', 'à la', 'à'],
+    answer: 2,
+  },
+
+  /* ---------- B1 ---------- */
+  {
+    id: 'p-b1-1',
+    level: 'B1',
+    skill: 'grammar',
+    prompt: 'Quand j\'étais petit, je ___ souvent chez mes grands-parents le dimanche.',
+    options: ['suis allé', 'allais', 'irai', 'vais aller'],
+    answer: 1,
+  },
+  {
+    id: 'p-b1-2',
+    level: 'B1',
+    skill: 'grammar',
+    prompt: 'Je regardais la télé quand le téléphone ___.',
+    options: ['sonnait', 'sonnera', 'a sonné', 'sonne'],
+    answer: 2,
+  },
+  {
+    id: 'p-b1-3',
+    level: 'B1',
+    skill: 'grammar',
+    prompt: 'Tu as parlé à tes parents ? – Oui, je ___ ai parlé hier.',
+    options: ['les', 'leur', 'lui', 'y'],
+    answer: 1,
+  },
+  {
+    id: 'p-b1-4',
+    level: 'B1',
+    skill: 'grammar',
+    prompt: 'Il faut que tu ___ tes devoirs avant de sortir.',
+    options: ['fais', 'feras', 'faire', 'fasses'],
+    answer: 3,
+  },
+  {
+    id: 'p-b1-5',
+    level: 'B1',
+    skill: 'grammar',
+    prompt: "C'est le livre ___ je t'ai parlé la semaine dernière.",
+    options: ['que', 'qui', 'dont', 'où'],
+    answer: 2,
+  },
+  {
+    id: 'p-b1-6',
+    level: 'B1',
+    skill: 'listening',
+    prompt: 'Listen. What does the speaker say?',
+    audio:
+      "Si j'avais plus de temps libre, j'apprendrais à jouer du piano. Malheureusement, avec mon nouveau travail, je rentre tard tous les soirs.",
+    options: [
+      'He would learn the piano if he had more free time',
+      'He has just started piano lessons',
+      'He plays the piano every evening after work',
+      'He has quit his job to have more free time',
+    ],
+    answer: 0,
+  },
+
+  /* ---------- B2 ---------- */
+  {
+    id: 'p-b2-1',
+    level: 'B2',
+    skill: 'grammar',
+    prompt: 'Je te prête ma voiture à condition que tu me la ___ avant lundi.',
+    options: ['rendras', 'rends', 'rendrais', 'rendes'],
+    answer: 3,
+  },
+  {
+    id: 'p-b2-2',
+    level: 'B2',
+    skill: 'grammar',
+    prompt: 'Quand nous sommes arrivés sur le quai, le train ___.',
+    options: ['est déjà parti', 'sera déjà parti', 'était déjà parti', 'a déjà parti'],
+    answer: 2,
+  },
+  {
+    id: 'p-b2-3',
+    level: 'B2',
+    skill: 'grammar',
+    prompt: 'Elle m\'a dit qu\'elle ___ le lendemain.',
+    options: ['viendrait', 'viendra', 'vient', 'viendrais'],
+    answer: 0,
+  },
+  {
+    id: 'p-b2-4',
+    level: 'B2',
+    skill: 'vocabulary',
+    prompt: 'Il pleuvait à verse. ___, le match a été maintenu.',
+    options: ['Par conséquent', 'Néanmoins', "C'est pourquoi", 'Ainsi'],
+    answer: 1,
+  },
+  {
+    id: 'p-b2-5',
+    level: 'B2',
+    skill: 'reading',
+    prompt:
+      '« Si le télétravail séduit de nombreux salariés, il n\'en demeure pas moins que l\'isolement qu\'il entraîne pèse sur certains d\'entre eux, au point que plusieurs entreprises envisagent un retour à un modèle hybride. » What does the author suggest?',
+    options: [
+      'Remote work is rejected by most employees',
+      'Companies are banning remote work completely',
+      'Most employees would rather work in the office full-time',
+      'Remote work appeals to many, but the isolation is leading some companies to consider a hybrid model',
+    ],
+    answer: 3,
+  },
+  {
+    id: 'p-b2-6',
+    level: 'B2',
+    skill: 'listening',
+    prompt: 'Listen. How did the speaker feel about the show?',
+    audio:
+      "Je ne m'attendais pas à ce que le spectacle soit aussi réussi. J'y étais allée un peu à reculons, mais finalement, je ne regrette pas du tout d'avoir accepté l'invitation.",
+    options: [
+      'She was excited beforehand but disappointed afterwards',
+      'She turned down the invitation',
+      "She was reluctant to go but ended up really enjoying it",
+      'She regrets accepting the invitation',
+    ],
+    answer: 2,
+  },
+];
